@@ -8,5 +8,5 @@ license = "MIT"
 mthds_version = ">=1.0.0"
 main_pipe = "training_needs_analysis"
 
-[exports.hr_training_needs_analyzer]
+[exports.hr_training_analyzer]
 pipes = ["training_needs_analysis", "analyze_single_team", "extract_assessments", "analyze_gaps", "compile_training_plan"]

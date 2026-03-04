@@ -1,4 +1,4 @@
-domain    = "hr_training_needs_analyzer"
+domain    = "hr_training_analyzer"
 description = "Analyze skills assessments to identify gaps aligned to strategic priorities, producing a phased training plan with budget recommendations"
 main_pipe = "training_needs_analysis"
 
