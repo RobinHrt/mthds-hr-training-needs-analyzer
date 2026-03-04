@@ -1,0 +1,12 @@
+[package]
+name = "hr_training_analyzer"
+address = "github.com/RobinHrt/mthds-hr-training-needs-analyzer"
+display_name = "HR Training Needs Analyzer"
+version = "1.0.0"
+description = "Analyze skills gaps and produce a phased training plan with budget recommendations"
+license = "MIT"
+mthds_version = ">=1.0.0"
+main_pipe = "training_needs_analysis"
+
+[exports.hr_training_needs_analyzer]
+pipes = ["training_needs_analysis", "analyze_single_team", "extract_assessments", "analyze_gaps", "compile_training_plan"]

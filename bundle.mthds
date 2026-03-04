@@ -1,0 +1,120 @@
+domain    = "hr_training_needs_analyzer"
+description = "Analyze skills assessments to identify gaps aligned to strategic priorities, producing a phased training plan with budget recommendations"
+main_pipe = "training_needs_analysis"
+
+[concept.TeamGapAnalysis]
+description = "Skills gap analysis for a single team or department"
+
+[concept.TeamGapAnalysis.structure]
+team_name    = { type = "text", description = "Team or department name", required = true }
+headcount    = { type = "integer", description = "Number of employees on the team" }
+competency_gaps = { type = "text", description = "Per required competency: current proficiency distribution, target level, gap severity, number needing development", required = true }
+top_skill_gaps  = { type = "text", description = "Top 3 skill gaps ranked by impact", required = true }
+recommended_interventions = { type = "text", description = "Recommended training interventions (workshop, certification, mentoring, hiring)", required = true }
+
+[concept.TrainingNeedsReport]
+description = "Organization-wide training needs analysis with budget recommendations"
+
+[concept.TrainingNeedsReport.structure]
+critical_gaps_strategic  = { type = "text", description = "Critical skill gaps aligned to strategic priorities", required = true }
+heat_map_data            = { type = "text", description = "Gap severity by team and competency, structured for visualization", required = true }
+investment_recommendations = { type = "text", description = "Training investments ranked by: strategic alignment x gap severity x number affected", required = true }
+budget_per_recommendation = { type = "text", description = "Estimated budget for each recommendation" }
+total_vs_available_budget = { type = "text", description = "Total recommended investment vs. available budget", required = true }
+phased_plan              = { type = "text", description = "Phased development plan by quarter (Q1/Q2/Q3/Q4)", required = true }
+executive_summary        = { type = "text", description = "Executive summary for CHRO and CEO", required = true }
+
+# --- Pipes ---
+
+[pipe.training_needs_analysis]
+type        = "PipeSequence"
+description = "Analyze skills gaps across teams and compile a training plan"
+inputs      = { skills_assessments = "Document[]", competency_requirements = "Text", strategic_priorities = "Text" }
+output      = "TrainingNeedsReport"
+steps = [
+    { pipe = "analyze_single_team", batch_over = "skills_assessments", batch_as = "team_assessment", result = "team_gap_analyses" },
+    { pipe = "compile_training_plan", result = "training_report" },
+]
+
+[pipe.analyze_single_team]
+type        = "PipeSequence"
+description = "Extract and analyze skills gaps for a single team"
+inputs      = { team_assessment = "Document", competency_requirements = "Text", strategic_priorities = "Text" }
+output      = "TeamGapAnalysis"
+steps = [
+    { pipe = "extract_assessments", result = "pages" },
+    { pipe = "analyze_gaps", result = "gap_analysis" },
+]
+
+[pipe.extract_assessments]
+type        = "PipeExtract"
+description = "Extract text from a team's skills assessment document"
+inputs      = { team_assessment = "Document" }
+output      = "Page[]"
+model       = "@default-text-from-pdf"
+
+[pipe.analyze_gaps]
+type        = "PipeLLM"
+description = "Analyze skills gaps for a single team against competency requirements and strategic priorities"
+inputs      = { pages = "Page[]", competency_requirements = "Text", strategic_priorities = "Text" }
+output      = "TeamGapAnalysis"
+model       = "$writing-factual"
+prompt      = """You are an L&D analyst performing a skills gap analysis for a team.
+
+From the assessment data, identify the team name and headcount.
+
+For each required competency from the competency requirements:
+1. Assess current proficiency distribution: how many are advanced, proficient, developing, novice, or have no capability.
+2. Identify the target proficiency level.
+3. Rate gap severity:
+   - Critical: blocks strategic priorities the company has stated
+   - Significant: meaningful gap affecting team performance
+   - Moderate: room for improvement but not blocking
+   - Minimal: team is near target
+4. Count employees needing development.
+
+Rank the top 3 skill gaps by impact (gap severity x number affected x strategic alignment).
+
+Recommend interventions for each gap: workshop, certification program, mentoring, or hiring to fill the gap.
+
+--- COMPETENCY REQUIREMENTS ---
+@competency_requirements
+
+--- STRATEGIC PRIORITIES ---
+@strategic_priorities
+
+--- TEAM ASSESSMENT DATA ---
+@pages"""
+
+[pipe.compile_training_plan]
+type        = "PipeLLM"
+description = "Compile all team analyses into an organization-wide training plan"
+inputs      = { team_gap_analyses = "TeamGapAnalysis[]", competency_requirements = "Text", strategic_priorities = "Text" }
+output      = "TrainingNeedsReport"
+model       = "$writing-factual"
+prompt      = """You are the VP of Learning & Development compiling an organization-wide training needs report.
+
+Synthesize all team gap analyses:
+
+1. Identify critical skill gaps that are directly aligned to the company's strategic priorities (e.g., if the company is going AI-first, which teams lack AI skills?).
+
+2. Create heat map data: a structured table showing gap severity by team and competency. Use a consistent format that could be directly visualized (team rows, competency columns, severity values).
+
+3. Rank training investment recommendations by: strategic alignment x gap severity x number of employees affected. The highest-impact investments should be first.
+
+4. Estimate budget per recommendation (typical market rates for workshops, certifications, etc.).
+
+5. Compare total recommended investment to the available training budget. If over budget, note what gets cut and the risk of cutting it.
+
+6. Create a phased quarterly plan (Q1/Q2/Q3/Q4): what gets done when, based on strategic urgency and practical sequencing.
+
+7. Write an executive summary for the CHRO and CEO that answers: where are we weakest, what does it cost to fix, and what happens to our strategy if we don't invest.
+
+--- COMPETENCY REQUIREMENTS ---
+@competency_requirements
+
+--- STRATEGIC PRIORITIES ---
+@strategic_priorities
+
+--- ALL TEAM GAP ANALYSES ---
+@team_gap_analyses"""

@@ -1,0 +1,25 @@
+{
+  "skills_assessments": {
+    "concept": "native.Document",
+    "content": [
+      {
+        "url": "/path/to/team1_assessment.pdf"
+      },
+      {
+        "url": "/path/to/team2_assessment.pdf"
+      }
+    ]
+  },
+  "competency_requirements": {
+    "concept": "native.Text",
+    "content": {
+      "text": "text_value"
+    }
+  },
+  "strategic_priorities": {
+    "concept": "native.Text",
+    "content": {
+      "text": "text_value"
+    }
+  }
+}
